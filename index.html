@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- Корректное отображение на iPhone -->
+    <meta name="viewport"
+          content="width=device-width,
+                   initial-scale=1.0,
+                   maximum-scale=1.0,
+                   user-scalable=no,
+                   viewport-fit=cover">
+    <meta name="theme-color" content="#f2f2f7">
+    <title>Заказ</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        :root {
+            --bg: #f2f2f7;
+            --card: #ffffff;
+            --text: #111111;
+            --secondary: #8e8e93;
+            --border: #e5e5ea;
+            --button: #007aff;
+            --danger: #ff3b30;
+            --control: #e9e9ee;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --card: #1c1c1e;
+                --text: #ffffff;
+                --secondary: #98989f;
+                --border: #38383a;
+                --button: #0a84ff;
+                --danger: #ff453a;
+                --control: #2c2c2e;
+            }
+        }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "SF Pro Display",
+                "SF Pro Text",
+                sans-serif;
+            min-height: 100vh;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        button,
+        input {
+            font-family: inherit;
+        }
+        .app {
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding: 20px 16px 110px;
+        }
+        /* HEADER */
+        header {
+            margin-bottom: 24px;
+        }
+        .title {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin: 0;
+        }
+        .date {
+            color: var(--secondary);
+            font-size: 15px;
+            margin-top: 4px;
+        }
+        /* NAVIGATION */
+        .tabs {
+            display: flex;
+            background: var(--control);
+            border-radius: 12px;
+            padding: 3px;
+            margin-bottom: 18px;
+        }
+        .tab {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--secondary);
+            padding: 9px 10px;
+            border-radius: 9px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: var(--card);
+            color: var(--text);
+        }
+        /* PRODUCT LIST */
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .product {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 12px;
+            min-height: 68px;
+            border: 1px solid var(--border);
+        }
+        .product-name {
+            flex: 1;
+            min-width: 0;
+            font-size: 17px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .counter {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .counter button {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 12px;
+            background: var(--control);
+            color: var(--button);
+            font-size: 25px;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .counter button:active {
+            transform: scale(0.92);
+        }
+        .quantity {
+            width: 48px;
+            text-align: center;
+            font-size: 17px;
+            font-weight: 600;
+        }
+        /* BOTTOM ACTIONS */
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .primary-button {
+            width: 100%;
+            border: none;
+            border-radius: 15px;
+            background: var(--button);
+            color: white;
+            min-height: 54px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .secondary-button {
+            width: 100%;
+            border: none;
+            border-radius: 15px;
+            background: var(--card);
+            color: var(--danger);
+            min-height: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+        button:active {
+            opacity: 0.7;
+        }
+        /* PRODUCTS SETTINGS */
+        .settings-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .add-product {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        .add-product input {
+            flex: 1;
+            min-width: 0;
+            height: 50px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            padding: 0 14px;
+            background: var(--card);
+            color: var(--text);
+            font-size: 16px;
+            outline: none;
+        }
+        .add-product button {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 13px;
+            background: var(--button);
+            color: white;
+            font-size: 26px;
+            cursor: pointer;
+        }
+        .manage-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .manage-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 12px;
+        }
+        .manage-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .drag {
+            color: var(--secondary);
+            font-size: 22px;
+            padding: 4px;
+        }
+        .manage-name {
+            flex: 1;
+            font-size: 16px;
+        }
+        .step {
+            color: var(--secondary);
+            font-size: 13px;
+            margin-top: 7px;
+            margin-left: 32px;
+        }
+        .manage-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .small-button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 10px;
+            background: var(--control);
+            color: var(--text);
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .small-button.delete {
+            color: var(--danger);
+        }
+        /* MODAL */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card);
+            border-radius: 24px 24px 0 0;
+            padding: 20px 16px 24px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .order-text {
+            width: 100%;
+            min-height: 200px;
+            resize: none;
+            border: none;
+            outline: none;
+            border-radius: 14px;
+            padding: 14px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .modal-buttons button {
+            flex: 1;
+            min-height: 50px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .copy-button {
+            background: var(--button);
+            color: white;
+        }
+        .close-button {
+            background: var(--control);
+            color: var(--text);
+        }
+        /* EMPTY */
+        .empty {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--secondary);
+        }
+        .empty-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        /* TOAST */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(30px + env(safe-area-inset-bottom));
+            transform: translate(-50%, 20px);
+            background: rgba(30, 30, 30, 0.92);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-size: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s ease;
+            z-index: 200;
+            white-space: nowrap;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+        /* CONFIRM */
+        .confirm-content {
+            text-align: center;
+        }
+        .confirm-title {
+            font-size: 21px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .confirm-text {
+            color: var(--secondary);
+            font-size: 15px;
+            margin-bottom: 20px;
+        }
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .confirm-buttons button {
+            flex: 1;
+            min-height: 50px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .cancel {
+            background: var(--control);
+            color: var(--text);
+        }
+        .confirm {
+            background: var(--danger);
+            color: white;
+        }
+        /* HIDDEN */
+        .hidden {
+            display: none !important;
+        }
+        @media (min-width: 601px) {
+            .modal {
+                align-items: center;
+            }
+            .modal-content {
+                border-radius: 24px;
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- HEADER -->
+    <header>
+        <h1 class="title">Заказ</h1>
+        <div class="date" id="currentDate"></div>
+    </header>
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab active" id="orderTab">
+            Заказ
+        </button>
+        <button class="tab" id="productsTab">
+            Товары
+        </button>
+    </div>
+    <!-- ORDER PAGE -->
+    <main id="orderPage">
+        <div id="productList" class="product-list"></div>
+        <div id="emptyState" class="empty hidden">
+            <div class="empty-icon">??</div>
+            <div>Товаров пока нет</div>
+        </div>
+        <div class="actions">
+            <button
+                class="primary-button"
+                id="createListButton">
+                Создать список
+            </button>
+            <button
+                class="secondary-button"
+                id="resetButton">
+                Сбросить количества
+            </button>
+        </div>
+    </main>
+    <!-- PRODUCTS PAGE -->
+    <main id="productsPage" class="hidden">
+        <div class="settings-title">
+            Товары
+        </div>
+        <div class="add-product">
+            <input
+                id="newProductInput"
+                type="text"
+                placeholder="Название товара"
+                autocomplete="off">
+            <button id="addProductButton">
+                +
+            </button>
+        </div>
+        <div id="manageList" class="manage-list"></div>
+    </main>
+</div>
+<!-- ORDER MODAL -->
+<div class="modal" id="orderModal">
+    <div class="modal-content">
+        <div class="modal-title">
+            Готовый список
+        </div>
+        <textarea
+            class="order-text"
+            id="orderText"
+            readonly></textarea>
+        <div class="modal-buttons">
+            <button
+                class="copy-button"
+                id="copyButton">
+                Скопировать
+            </button>
+            <button
+                class="close-button"
+                id="closeOrderButton">
+                Закрыть
+            </button>
+        </div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="modal" id="confirmModal">
+    <div class="modal-content confirm-content">
+        <div class="confirm-title">
+            Сбросить количества?
+        </div>
+        <div class="confirm-text">
+            Количество всех товаров станет 0.
+        </div>
+        <div class="confirm-buttons">
+            <button
+                class="cancel"
+                id="cancelReset">
+                Отмена
+            </button>
+            <button
+                class="confirm"
+                id="confirmReset">
+                Сбросить
+            </button>
+        </div>
+    </div>
+</div>
+<!-- TOAST -->
+<div class="toast" id="toast">
+    Список скопирован
+</div>
+<script>
+    /* =========================================
+       ДАННЫЕ
+    ========================================= */
+    const STORAGE_KEY = "store_order_products";
+    let products = JSON.parse(
+        localStorage.getItem(STORAGE_KEY)
+    ) || [
+        {
+            id: 1,
+            name: "Coca-Cola",
+            quantity: 0,
+            step: 0.5
+        },
+        {
+            id: 2,
+            name: "Fanta",
+            quantity: 0,
+            step: 0.5
+        },
+        {
+            id: 3,
+            name: "Sprite",
+            quantity: 0,
+            step: 0.5
+        },
+        {
+            id: 4,
+            name: "Вода",
+            quantity: 0,
+            step: 0.5
+        },
+        {
+            id: 5,
+            name: "Чипсы",
+            quantity: 0,
+            step: 0.5
+        }
+    ];
+    /* =========================================
+       СОХРАНЕНИЕ
+    ========================================= */
+    function saveProducts() {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(products)
+        );
+    }
+    /* =========================================
+       ФОРМАТИРОВАНИЕ ЧИСЛА
+    ========================================= */
+    function formatNumber(number) {
+        return Number(number)
+            .toFixed(2)
+            .replace(/\.00$/, "")
+            .replace(/(\.\d)0$/, "$1");
+    }
+    /* =========================================
+       ДАТА
+    ========================================= */
+    function showDate() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat(
+            "ru-RU",
+            {
+                day: "numeric",
+                month: "long",
+                year: "numeric"
+            }
+        );
+        document.getElementById("currentDate")
+            .textContent = formatter.format(now);
+    }
+    /* =========================================
+       НОВЫЙ ДЕНЬ
+    ========================================= */
+    function checkNewDay() {
+        const today =
+            new Date().toISOString().split("T")[0];
+        const savedDay =
+            localStorage.getItem("store_order_day");
+        if (savedDay !== today) {
+            products.forEach(product => {
+                product.quantity = 0;
+            });
+            localStorage.setItem(
+                "store_order_day",
+                today
+            );
+            saveProducts();
+        }
+    }
+    /* =========================================
+       ОТОБРАЖЕНИЕ ТОВАРОВ
+    ========================================= */
+    function renderProducts() {
+        const container =
+            document.getElementById("productList");
+        const empty =
+            document.getElementById("emptyState");
+        container.innerHTML = "";
+        if (products.length === 0) {
+            empty.classList.remove("hidden");
+            return;
+        }
+        empty.classList.add("hidden");
+        products.forEach(product => {
+            const row =
+                document.createElement("div");
+            row.className = "product";
+            row.innerHTML = `
+                <div class="product-name">
+                    ${escapeHTML(product.name)}
+                </div>
+                <div class="counter">
+                    <button
+                        aria-label="Уменьшить"
+                        onclick="changeQuantity(${product.id}, -1)">
+                        ?
+                    </button>
+                    <div class="quantity">
+                        ${formatNumber(product.quantity)}
+                    </div>
+                    <button
+                        aria-label="Увеличить"
+                        onclick="changeQuantity(${product.id}, 1)">
+                        +
+                    </button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+    /* =========================================
+       ИЗМЕНЕНИЕ КОЛИЧЕСТВА
+    ========================================= */
+    function changeQuantity(id, direction) {
+        const product =
+            products.find(item => item.id === id);
+        if (!product) return;
+        product.quantity +=
+            product.step * direction;
+        if (product.quantity < 0) {
+            product.quantity = 0;
+        }
+        product.quantity =
+            Math.round(product.quantity * 100) / 100;
+        saveProducts();
+        renderProducts();
+    }
+    /* =========================================
+       ЭКРАН ТОВАРОВ
+    ========================================= */
+    function renderManageList() {
+        const container =
+            document.getElementById("manageList");
+        container.innerHTML = "";
+        products.forEach((product, index) => {
+            const item =
+                document.createElement("div");
+            item.className = "manage-item";
+            item.innerHTML = `
+                <div class="manage-row">
+                    <div class="drag">
+                        ?
+                    </div>
+                    <div class="manage-name">
+                        ${escapeHTML(product.name)}
+                    </div>
+                    <div class="manage-buttons">
+                        <button
+                            class="small-button"
+                            onclick="moveProduct(${index}, -1)">
+                            ?
+                        </button>
+                        <button
+                            class="small-button"
+                            onclick="moveProduct(${index}, 1)">
+                            ?
+                        </button>
+                        <button
+                            class="small-button delete"
+                            onclick="deleteProduct(${product.id})">
+                            ?
+                        </button>
+                    </div>
+                </div>
+                <div class="step">
+                    Шаг: ${formatNumber(product.step)}
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+    /* =========================================
+       ДОБАВЛЕНИЕ ТОВАРА
+    ========================================= */
+    function addProduct() {
+        const input =
+            document.getElementById("newProductInput");
+        const name =
+            input.value.trim();
+        if (!name) {
+            showToast("Введите название товара");
+            return;
+        }
+        const newProduct = {
+            id: Date.now(),
+            name: name,
+            quantity: 0,
+            step: 0.5
+        };
+        products.push(newProduct);
+        saveProducts();
+        input.value = "";
+        renderProducts();
+        renderManageList();
+        showToast("Товар добавлен");
+    }
+    /* =========================================
+       УДАЛЕНИЕ ТОВАРА
+    ========================================= */
+    function deleteProduct(id) {
+        const product =
+            products.find(item => item.id === id);
+        if (!product) return;
+        const confirmed =
+            confirm(
+                `Удалить товар "${product.name}"?`
+            );
+        if (!confirmed) return;
+        products =
+            products.filter(item => item.id !== id);
+        saveProducts();
+        renderProducts();
+        renderManageList();
+    }
+    /* =========================================
+       ПЕРЕМЕЩЕНИЕ ТОВАРА
+    ========================================= */
+    function moveProduct(index, direction) {
+        const newIndex =
+            index + direction;
+        if (
+            newIndex < 0 ||
+            newIndex >= products.length
+        ) {
+            return;
+        }
+        [
+            products[index],
+            products[newIndex]
+        ] = [
+            products[newIndex],
+            products[index]
+        ];
+        saveProducts();
+        renderProducts();
+        renderManageList();
+    }
+    /* =========================================
+       СОЗДАНИЕ СПИСКА
+    ========================================= */
+    function createOrderList() {
+        const selected =
+            products.filter(
+                product => product.quantity > 0
+            );
+        if (selected.length === 0) {
+            showToast(
+                "Количество товаров пока не выбрано"
+            );
+            return;
+        }
+        let text = "";
+        selected.forEach(product => {
+            text +=
+                `${product.name} — ${formatNumber(product.quantity)} блок.\n`;
+        });
+        document.getElementById("orderText")
+            .value = text.trim();
+        document.getElementById("orderModal")
+            .classList.add("show");
+    }
+    /* =========================================
+       КОПИРОВАНИЕ
+    ========================================= */
+    async function copyOrder() {
+        const text =
+            document.getElementById("orderText").value;
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast("Список скопирован");
+        } catch (error) {
+            const textarea =
+                document.getElementById("orderText");
+            textarea.select();
+            document.execCommand("copy");
+            showToast("Список скопирован");
+        }
+    }
+    /* =========================================
+       СБРОС
+    ========================================= */
+    function resetQuantities() {
+        document.getElementById("confirmModal")
+            .classList.add("show");
+    }
+    function confirmReset() {
+        products.forEach(product => {
+            product.quantity = 0;
+        });
+        saveProducts();
+        renderProducts();
+        document.getElementById("confirmModal")
+            .classList.remove("show");
+        showToast("Количество сброшено");
+    }
+    /* =========================================
+       TOAST
+    ========================================= */
+    let toastTimer;
+    function showToast(message) {
+        const toast =
+            document.getElementById("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer =
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 2000);
+    }
+    /* =========================================
+       ЭКРАНЫ
+    ========================================= */
+    function showOrderPage() {
+        document.getElementById("orderPage")
+            .classList.remove("hidden");
+        document.getElementById("productsPage")
+            .classList.add("hidden");
+        document.getElementById("orderTab")
+            .classList.add("active");
+        document.getElementById("productsTab")
+            .classList.remove("active");
+    }
+    function showProductsPage() {
+        document.getElementById("orderPage")
+            .classList.add("hidden");
+        document.getElementById("productsPage")
+            .classList.remove("hidden");
+        document.getElementById("orderTab")
+            .classList.remove("active");
+        document.getElementById("productsTab")
+            .classList.add("active");
+        renderManageList();
+    }
+    /* =========================================
+       ЗАЩИТА HTML
+    ========================================= */
+    function escapeHTML(text) {
+        const div =
+            document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    /* =========================================
+       СОБЫТИЯ
+    ========================================= */
+    document
+        .getElementById("orderTab")
+        .addEventListener(
+            "click",
+            showOrderPage
+        );
+    document
+        .getElementById("productsTab")
+        .addEventListener(
+            "click",
+            showProductsPage
+        );
+    document
+        .getElementById("addProductButton")
+        .addEventListener(
+            "click",
+            addProduct
+        );
+    document
+        .getElementById("newProductInput")
+        .addEventListener(
+            "keydown",
+            event => {
+                if (event.key === "Enter") {
+                    addProduct();
+                }
+            }
+        );
+    document
+        .getElementById("createListButton")
+        .addEventListener(
+            "click",
+            createOrderList
+        );
+    document
+        .getElementById("copyButton")
+        .addEventListener(
+            "click",
+            copyOrder
+        );
+    document
+        .getElementById("closeOrderButton")
+        .addEventListener(
+            "click",
+            () => {
+                document
+                    .getElementById("orderModal")
+                    .classList.remove("show");
+            }
+        );
+    document
+        .getElementById("resetButton")
+        .addEventListener(
+            "click",
+            resetQuantities
+        );
+    document
+        .getElementById("cancelReset")
+        .addEventListener(
+            "click",
+            () => {
+                document
+                    .getElementById("confirmModal")
+                    .classList.remove("show");
+            }
+        );
+    document
+        .getElementById("confirmReset")
+        .addEventListener(
+            "click",
+            confirmReset
+        );
+    /* =========================================
+       ЗАПУСК
+    ========================================= */
+    checkNewDay();
+    showDate();
+    renderProducts();
+    renderManageList();
+</script>
+</body>
+</html>
+h
