@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <!-- Корректное отображение на iPhone -->
     <meta name="viewport"
@@ -514,452 +515,913 @@
 </div>
 <script>
     /* =========================================
+       SUPABASE
+    ========================================= */
+
+    const SUPABASE_URL =
+        "https://jfvfxdoegektneblzhzk.supabase.co";
+
+    const SUPABASE_KEY =
+        "sb_publishable_DnJimwDPvQ0sYHsCBahL9w_xPD9Kth9";
+
+    const supabaseClient =
+        window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
+
+    /* =========================================
        ДАННЫЕ
     ========================================= */
-    const STORAGE_KEY = "store_order_products";
-    let products = JSON.parse(
-        localStorage.getItem(STORAGE_KEY)
-    ) || [
-        {
-            id: 1,
-            name: "Coca-Cola",
-            quantity: 0,
-            step: 0.5
-        },
-        {
-            id: 2,
-            name: "Fanta",
-            quantity: 0,
-            step: 0.5
-        },
-        {
-            id: 3,
-            name: "Sprite",
-            quantity: 0,
-            step: 0.5
-        },
-        {
-            id: 4,
-            name: "Вода",
-            quantity: 0,
-            step: 0.5
-        },
-        {
-            id: 5,
-            name: "Чипсы",
-            quantity: 0,
-            step: 0.5
+
+    let products = [];
+
+
+    /* =========================================
+       ЗАГРУЗКА ТОВАРОВ ИЗ БАЗЫ
+    ========================================= */
+
+    async function loadProducts() {
+
+        const { data, error } = await supabaseClient
+            .from("products")
+            .select("*")
+            .order("sort_order", {
+                ascending: true
+            });
+
+        if (error) {
+            console.error("Ошибка загрузки:", error);
+            showToast("Ошибка загрузки товаров");
+            return;
         }
-    ];
+
+        products = data || [];
+
+        renderProducts();
+        renderManageList();
+    }
+
+
     /* =========================================
        СОХРАНЕНИЕ
     ========================================= */
-    function saveProducts() {
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(products)
-        );
+
+    async function saveProducts() {
+
+        for (const product of products) {
+
+            const { error } = await supabaseClient
+                .from("products")
+                .update({
+                    quantity: product.quantity,
+                    sort_order: product.sort_order
+                })
+                .eq("id", product.id);
+
+            if (error) {
+                console.error(
+                    "Ошибка сохранения:",
+                    error
+                );
+
+                showToast("Ошибка сохранения");
+                return;
+            }
+        }
     }
+
+
     /* =========================================
        ФОРМАТИРОВАНИЕ ЧИСЛА
     ========================================= */
+
     function formatNumber(number) {
+
         return Number(number)
             .toFixed(2)
             .replace(/\.00$/, "")
             .replace(/(\.\d)0$/, "$1");
     }
+
+
     /* =========================================
        ДАТА
     ========================================= */
+
     function showDate() {
+
         const now = new Date();
-        const formatter = new Intl.DateTimeFormat(
-            "ru-RU",
-            {
-                day: "numeric",
-                month: "long",
-                year: "numeric"
-            }
-        );
-        document.getElementById("currentDate")
-            .textContent = formatter.format(now);
-    }
-    /* =========================================
-       НОВЫЙ ДЕНЬ
-    ========================================= */
-    function checkNewDay() {
-        const today =
-            new Date().toISOString().split("T")[0];
-        const savedDay =
-            localStorage.getItem("store_order_day");
-        if (savedDay !== today) {
-            products.forEach(product => {
-                product.quantity = 0;
-            });
-            localStorage.setItem(
-                "store_order_day",
-                today
+
+        const formatter =
+            new Intl.DateTimeFormat(
+                "ru-RU",
+                {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                }
             );
-            saveProducts();
-        }
+
+        document
+            .getElementById("currentDate")
+            .textContent =
+            formatter.format(now);
     }
+
+
     /* =========================================
        ОТОБРАЖЕНИЕ ТОВАРОВ
     ========================================= */
+
     function renderProducts() {
+
         const container =
-            document.getElementById("productList");
+            document.getElementById(
+                "productList"
+            );
+
         const empty =
-            document.getElementById("emptyState");
+            document.getElementById(
+                "emptyState"
+            );
+
         container.innerHTML = "";
+
         if (products.length === 0) {
+
             empty.classList.remove("hidden");
+
             return;
         }
+
         empty.classList.add("hidden");
+
         products.forEach(product => {
+
             const row =
                 document.createElement("div");
+
             row.className = "product";
+
             row.innerHTML = `
                 <div class="product-name">
                     ${escapeHTML(product.name)}
                 </div>
+
                 <div class="counter">
+
                     <button
                         aria-label="Уменьшить"
-                        onclick="changeQuantity(${product.id}, -1)">
-                        ?
+                        onclick="changeQuantity(${product.id}, -0.5)">
+                        −
                     </button>
+
                     <div class="quantity">
                         ${formatNumber(product.quantity)}
                     </div>
+
                     <button
                         aria-label="Увеличить"
-                        onclick="changeQuantity(${product.id}, 1)">
+                        onclick="changeQuantity(${product.id}, 0.5)">
                         +
                     </button>
+
                 </div>
             `;
+
             container.appendChild(row);
         });
     }
+
+
     /* =========================================
        ИЗМЕНЕНИЕ КОЛИЧЕСТВА
     ========================================= */
-    function changeQuantity(id, direction) {
+
+    async function changeQuantity(
+        id,
+        amount
+    ) {
+
         const product =
-            products.find(item => item.id === id);
+            products.find(
+                p => p.id === id
+            );
+
         if (!product) return;
-        product.quantity +=
-            product.step * direction;
-        if (product.quantity < 0) {
-            product.quantity = 0;
+
+        const newQuantity =
+            Math.max(
+                0,
+                Number(product.quantity) +
+                amount
+            );
+
+        const { error } =
+            await supabaseClient
+                .from("products")
+                .update({
+                    quantity: newQuantity
+                })
+                .eq("id", id);
+
+        if (error) {
+
+            console.error(error);
+
+            showToast(
+                "Ошибка сохранения"
+            );
+
+            return;
         }
+
         product.quantity =
-            Math.round(product.quantity * 100) / 100;
-        saveProducts();
+            newQuantity;
+
         renderProducts();
     }
+
+
     /* =========================================
        ЭКРАН ТОВАРОВ
     ========================================= */
+
     function renderManageList() {
+
         const container =
-            document.getElementById("manageList");
+            document.getElementById(
+                "manageList"
+            );
+
         container.innerHTML = "";
-        products.forEach((product, index) => {
-            const item =
-                document.createElement("div");
-            item.className = "manage-item";
-            item.innerHTML = `
-                <div class="manage-row">
-                    <div class="drag">
-                        ?
+
+        products.forEach(
+            (product, index) => {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+                item.className =
+                    "manage-item";
+
+                item.innerHTML = `
+                    <div class="manage-row">
+
+                        <div class="drag">
+                            ☰
+                        </div>
+
+                        <div class="manage-name">
+                            ${escapeHTML(
+                                product.name
+                            )}
+                        </div>
+
+                        <div class="manage-buttons">
+
+                            <button
+                                class="small-button"
+                                onclick="moveProduct(${index}, -1)">
+                                ↑
+                            </button>
+
+                            <button
+                                class="small-button"
+                                onclick="moveProduct(${index}, 1)">
+                                ↓
+                            </button>
+
+                            <button
+                                class="small-button delete"
+                                onclick="deleteProduct(${product.id})">
+                                ×
+                            </button>
+
+                        </div>
+
                     </div>
-                    <div class="manage-name">
-                        ${escapeHTML(product.name)}
+
+                    <div class="step">
+                        Шаг: 0.5
                     </div>
-                    <div class="manage-buttons">
-                        <button
-                            class="small-button"
-                            onclick="moveProduct(${index}, -1)">
-                            ?
-                        </button>
-                        <button
-                            class="small-button"
-                            onclick="moveProduct(${index}, 1)">
-                            ?
-                        </button>
-                        <button
-                            class="small-button delete"
-                            onclick="deleteProduct(${product.id})">
-                            ?
-                        </button>
-                    </div>
-                </div>
-                <div class="step">
-                    Шаг: ${formatNumber(product.step)}
-                </div>
-            `;
-            container.appendChild(item);
-        });
+                `;
+
+                container.appendChild(item);
+            }
+        );
     }
+
+
     /* =========================================
        ДОБАВЛЕНИЕ ТОВАРА
     ========================================= */
-    function addProduct() {
+
+    async function addProduct() {
+
         const input =
-            document.getElementById("newProductInput");
+            document.getElementById(
+                "newProductInput"
+            );
+
         const name =
             input.value.trim();
+
         if (!name) {
-            showToast("Введите название товара");
+
+            showToast(
+                "Введите название товара"
+            );
+
             return;
         }
-        const newProduct = {
-            id: Date.now(),
-            name: name,
-            quantity: 0,
-            step: 0.5
-        };
-        products.push(newProduct);
-        saveProducts();
+
+        const maxOrder =
+            products.length
+                ? Math.max(
+                    ...products.map(
+                        p =>
+                            Number(
+                                p.sort_order
+                            )
+                    )
+                )
+                : 0;
+
+        const { error } =
+            await supabaseClient
+                .from("products")
+                .insert({
+                    name: name,
+                    quantity: 0,
+                    sort_order:
+                        maxOrder + 1
+                });
+
+        if (error) {
+
+            console.error(error);
+
+            showToast(
+                "Ошибка добавления"
+            );
+
+            return;
+        }
+
         input.value = "";
-        renderProducts();
-        renderManageList();
-        showToast("Товар добавлен");
+
+        await loadProducts();
+
+        showToast(
+            "Товар добавлен"
+        );
     }
+
+
     /* =========================================
        УДАЛЕНИЕ ТОВАРА
     ========================================= */
-    function deleteProduct(id) {
-        const product =
-            products.find(item => item.id === id);
-        if (!product) return;
-        const confirmed =
-            confirm(
-                `Удалить товар "${product.name}"?`
+
+    async function deleteProduct(id) {
+
+        const { error } =
+            await supabaseClient
+                .from("products")
+                .delete()
+                .eq("id", id);
+
+        if (error) {
+
+            console.error(error);
+
+            showToast(
+                "Ошибка удаления"
             );
-        if (!confirmed) return;
-        products =
-            products.filter(item => item.id !== id);
-        saveProducts();
-        renderProducts();
-        renderManageList();
+
+            return;
+        }
+
+        await loadProducts();
+
+        showToast(
+            "Товар удалён"
+        );
     }
+
+
     /* =========================================
        ПЕРЕМЕЩЕНИЕ ТОВАРА
     ========================================= */
-    function moveProduct(index, direction) {
+
+    async function moveProduct(
+        index,
+        direction
+    ) {
+
         const newIndex =
             index + direction;
+
         if (
             newIndex < 0 ||
             newIndex >= products.length
         ) {
             return;
         }
-        [
-            products[index],
-            products[newIndex]
-        ] = [
-            products[newIndex],
-            products[index]
-        ];
-        saveProducts();
-        renderProducts();
-        renderManageList();
+
+        const current =
+            products[index];
+
+        const target =
+            products[newIndex];
+
+        const currentOrder =
+            current.sort_order;
+
+        current.sort_order =
+            target.sort_order;
+
+        target.sort_order =
+            currentOrder;
+
+        await supabaseClient
+            .from("products")
+            .update({
+                sort_order:
+                    current.sort_order
+            })
+            .eq("id", current.id);
+
+        await supabaseClient
+            .from("products")
+            .update({
+                sort_order:
+                    target.sort_order
+            })
+            .eq("id", target.id);
+
+        await loadProducts();
     }
+
+
     /* =========================================
        СОЗДАНИЕ СПИСКА
     ========================================= */
+
     function createOrderList() {
+
         const selected =
             products.filter(
-                product => product.quantity > 0
+                product =>
+                    Number(
+                        product.quantity
+                    ) > 0
             );
-        if (selected.length === 0) {
+
+        if (
+            selected.length === 0
+        ) {
+
             showToast(
                 "Количество товаров пока не выбрано"
             );
+
             return;
         }
+
         let text = "";
-        selected.forEach(product => {
-            text +=
-                `${product.name} — ${formatNumber(product.quantity)} блок.\n`;
-        });
-        document.getElementById("orderText")
-            .value = text.trim();
-        document.getElementById("orderModal")
+
+        selected.forEach(
+            product => {
+
+                text +=
+                    `${product.name} — ${formatNumber(product.quantity)} блок.\n`;
+            }
+        );
+
+        document
+            .getElementById(
+                "orderText"
+            )
+            .value =
+            text.trim();
+
+        document
+            .getElementById(
+                "orderModal"
+            )
             .classList.add("show");
     }
+
+
     /* =========================================
        КОПИРОВАНИЕ
     ========================================= */
+
     async function copyOrder() {
+
         const text =
-            document.getElementById("orderText").value;
+            document
+                .getElementById(
+                    "orderText"
+                )
+                .value;
+
         try {
-            await navigator.clipboard.writeText(text);
-            showToast("Список скопирован");
+
+            await navigator
+                .clipboard
+                .writeText(text);
+
+            showToast(
+                "Список скопирован"
+            );
+
         } catch (error) {
+
             const textarea =
-                document.getElementById("orderText");
+                document.getElementById(
+                    "orderText"
+                );
+
             textarea.select();
-            document.execCommand("copy");
-            showToast("Список скопирован");
+
+            document.execCommand(
+                "copy"
+            );
+
+            showToast(
+                "Список скопирован"
+            );
         }
     }
+
+
     /* =========================================
        СБРОС
     ========================================= */
+
     function resetQuantities() {
-        document.getElementById("confirmModal")
+
+        document
+            .getElementById(
+                "confirmModal"
+            )
             .classList.add("show");
     }
-    function confirmReset() {
-        products.forEach(product => {
-            product.quantity = 0;
-        });
-        saveProducts();
+
+
+    async function confirmReset() {
+
+        const { error } =
+            await supabaseClient
+                .from("products")
+                .update({
+                    quantity: 0
+                })
+                .neq("id", 0);
+
+        if (error) {
+
+            console.error(error);
+
+            showToast(
+                "Ошибка сброса"
+            );
+
+            return;
+        }
+
+        products.forEach(
+            product => {
+                product.quantity = 0;
+            }
+        );
+
         renderProducts();
-        document.getElementById("confirmModal")
-            .classList.remove("show");
-        showToast("Количество сброшено");
+
+        document
+            .getElementById(
+                "confirmModal"
+            )
+            .classList.remove(
+                "show"
+            );
+
+        showToast(
+            "Количество сброшено"
+        );
     }
+
+
     /* =========================================
        TOAST
     ========================================= */
+
     let toastTimer;
-    function showToast(message) {
+
+    function showToast(
+        message
+    ) {
+
         const toast =
-            document.getElementById("toast");
-        toast.textContent = message;
-        toast.classList.add("show");
-        clearTimeout(toastTimer);
+            document.getElementById(
+                "toast"
+            );
+
+        toast.textContent =
+            message;
+
+        toast.classList.add(
+            "show"
+        );
+
+        clearTimeout(
+            toastTimer
+        );
+
         toastTimer =
-            setTimeout(() => {
-                toast.classList.remove("show");
-            }, 2000);
+            setTimeout(
+                () => {
+
+                    toast.classList.remove(
+                        "show"
+                    );
+
+                },
+                2000
+            );
     }
+
+
     /* =========================================
        ЭКРАНЫ
     ========================================= */
+
     function showOrderPage() {
-        document.getElementById("orderPage")
-            .classList.remove("hidden");
-        document.getElementById("productsPage")
-            .classList.add("hidden");
-        document.getElementById("orderTab")
-            .classList.add("active");
-        document.getElementById("productsTab")
-            .classList.remove("active");
+
+        document
+            .getElementById(
+                "orderPage"
+            )
+            .classList.remove(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "productsPage"
+            )
+            .classList.add(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "orderTab"
+            )
+            .classList.add(
+                "active"
+            );
+
+        document
+            .getElementById(
+                "productsTab"
+            )
+            .classList.remove(
+                "active"
+            );
     }
+
+
     function showProductsPage() {
-        document.getElementById("orderPage")
-            .classList.add("hidden");
-        document.getElementById("productsPage")
-            .classList.remove("hidden");
-        document.getElementById("orderTab")
-            .classList.remove("active");
-        document.getElementById("productsTab")
-            .classList.add("active");
+
+        document
+            .getElementById(
+                "orderPage"
+            )
+            .classList.add(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "productsPage"
+            )
+            .classList.remove(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "orderTab"
+            )
+            .classList.remove(
+                "active"
+            );
+
+        document
+            .getElementById(
+                "productsTab"
+            )
+            .classList.add(
+                "active"
+            );
+
         renderManageList();
     }
+
+
     /* =========================================
        ЗАЩИТА HTML
     ========================================= */
+
     function escapeHTML(text) {
+
         const div =
-            document.createElement("div");
-        div.textContent = text;
+            document.createElement(
+                "div"
+            );
+
+        div.textContent =
+            text;
+
         return div.innerHTML;
     }
+
+
+    /* =========================================
+       REALTIME
+    ========================================= */
+
+    function startRealtime() {
+
+        supabaseClient
+            .channel(
+                "products-changes"
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "products"
+                },
+                () => {
+
+                    loadProducts();
+
+                }
+            )
+            .subscribe();
+    }
+
+
     /* =========================================
        СОБЫТИЯ
     ========================================= */
+
     document
-        .getElementById("orderTab")
+        .getElementById(
+            "orderTab"
+        )
         .addEventListener(
             "click",
             showOrderPage
         );
+
+
     document
-        .getElementById("productsTab")
+        .getElementById(
+            "productsTab"
+        )
         .addEventListener(
             "click",
             showProductsPage
         );
+
+
     document
-        .getElementById("addProductButton")
+        .getElementById(
+            "addProductButton"
+        )
         .addEventListener(
             "click",
             addProduct
         );
+
+
     document
-        .getElementById("newProductInput")
+        .getElementById(
+            "newProductInput"
+        )
         .addEventListener(
             "keydown",
             event => {
-                if (event.key === "Enter") {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
                     addProduct();
+
                 }
             }
         );
+
+
     document
-        .getElementById("createListButton")
+        .getElementById(
+            "createListButton"
+        )
         .addEventListener(
             "click",
             createOrderList
         );
+
+
     document
-        .getElementById("copyButton")
+        .getElementById(
+            "copyButton"
+        )
         .addEventListener(
             "click",
             copyOrder
         );
+
+
     document
-        .getElementById("closeOrderButton")
+        .getElementById(
+            "closeOrderButton"
+        )
         .addEventListener(
             "click",
             () => {
+
                 document
-                    .getElementById("orderModal")
-                    .classList.remove("show");
+                    .getElementById(
+                        "orderModal"
+                    )
+                    .classList.remove(
+                        "show"
+                    );
             }
         );
+
+
     document
-        .getElementById("resetButton")
+        .getElementById(
+            "resetButton"
+        )
         .addEventListener(
             "click",
             resetQuantities
         );
+
+
     document
-        .getElementById("cancelReset")
+        .getElementById(
+            "cancelReset"
+        )
         .addEventListener(
             "click",
             () => {
+
                 document
-                    .getElementById("confirmModal")
-                    .classList.remove("show");
+                    .getElementById(
+                        "confirmModal"
+                    )
+                    .classList.remove(
+                        "show"
+                    );
             }
         );
+
+
     document
-        .getElementById("confirmReset")
+        .getElementById(
+            "confirmReset"
+        )
         .addEventListener(
             "click",
             confirmReset
         );
+
+
     /* =========================================
        ЗАПУСК
     ========================================= */
-    checkNewDay();
+
     showDate();
-    renderProducts();
-    renderManageList();
+
+    loadProducts();
+
+    startRealtime();
+
 </script>
 </body>
 </html>
